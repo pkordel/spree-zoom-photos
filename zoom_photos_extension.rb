@@ -17,7 +17,7 @@ class ZoomPhotosExtension < Spree::Extension
         if product.images.empty?
           image_path "noimage/#{image_style.to_s}.jpg"
         else
-          image_path product.images.first.attachment.url(image_style)  
+          image_path product.images.first.attachment.url(image_style)
         end
       end
       

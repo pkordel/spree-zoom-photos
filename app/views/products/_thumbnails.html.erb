@@ -1,4 +1,4 @@
-<!-- no need for thumnails unless there is more then one image -->
+<!-- no need for thumbnails unless there is more then one image -->
 <% if product.images.size > 1 %>
   <ul id="product-thumbnails" class="thumbnails">
     <% product.images.each do |i| %>  
@@ -7,15 +7,20 @@
   </ul>
 <% end %>
 
-<% if @product.variants? 
+<% if @product.variants?
   has_checked = false %>
-  <h4 id="variant-images"><%= t('images_for') %>: <%= @selected_variant.options_text %></h4>
+  <% unless @selected_variant.options_text.blank? %>
+  <h4 id="variant-images">
+    <%= t('images_for') %>: 
+    <span><%= @selected_variant.options_text %></span>
+  </h4>
+  <% end %>
   <ul id="variant-thumbnails" class="thumbnails">
-    <% product.variants.each do |v|
-        checked = !has_checked && (v.in_stock || Spree::Config[:allow_backorders])
+    <% @variants.each do |v|
+        checked = !has_checked && (v.available?)
    		  has_checked = true if checked
         
-        if checked 
+        if checked
           v.images.each do |i| %>  
             <li><%= link_to(image_tag(i.attachment.url(:mini)), i.attachment.url(:product)) %></li>
           <% end %>
@@ -26,14 +31,14 @@
 
 <% content_for :head do %>
   <script type="text/javascript" charset="utf-8">
- 
     var images = new Array();
-    <% product.variants.each do |v| %>
+    <% @variants.each do |v| %>
       images[<%= v.id.to_s %>] = new Array();
       <% v.images.each_with_index do |image, i| %>
-        images[<%= v.id.to_s %>][<%= i %>] = '<%= image.attachment.url(:mini) %>';
+        images[<%= v.id.to_s %>][<%= i %>] = <%= link_to(image_tag(image.attachment.url(:mini)), image.attachment.url(:product)).to_json %>;
       <% end %>
     <% end %>
+    
     var add_image_handlers = function(){
       $("#main-image").data('selectedThumb', $('#main-image img').attr('src'));
       $('ul.thumbnails li').eq(0).addClass('selected');
@@ -41,11 +46,43 @@
         $("#main-image").data('selectedThumb', $(this).attr('href'));
         $('ul.thumbnails li').removeClass('selected');
         $(this).parent('li').addClass('selected');
-        $('#main-image img').attr('src', $(this).attr('href').replace('mini', 'product'));
+        $('#main-image img').attr('src', $(this).attr('href').replace('mini', 'xl'));
         return false;
       });
     };
  
     jQuery(document).ready(function(){ add_image_handlers(); });
+    
+    jQuery(document).ready(function() {
+      jQuery('#product-variants input[type=radio]').click(function (event) {
+        var vid = this.value;
+        var text = $(this).siblings(".variant-description").html();
+
+        jQuery("#variant-thumbnails").empty();
+        if (text.length > 0) {
+          jQuery("#variant-images span").html(text);
+        }
+
+        if (images[vid].length > 0) {
+          $.each(images[vid], function(i, link) {
+            jQuery("#variant-thumbnails").append('<li>' + link + '</li>');
+          });
+          
+          jQuery("#variant-images").show();
+          
+        } else {
+          jQuery("#variant-images").hide();
+        }
+
+        add_image_handlers();
+
+        var link = jQuery("#variant-thumbnails a")[0];
+
+        jQuery("#main-image img").attr({src: jQuery(link).attr('href')});
+        jQuery('ul.thumbnails li').removeClass('selected');
+        jQuery(link).parent('li').addClass('selected');
+        checkAndUpdateImageViews();
+      });
+    });
   </script>
 <% end %>
